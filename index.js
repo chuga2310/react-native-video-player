@@ -98,6 +98,7 @@ export default class VideoPlayer extends Component {
       isControlsVisible: !props.hideControlsOnStart,
       duration: 0,
       isSeeking: false,
+      isFullScreen:false
     };
 
     this.seekBarWidth = 200;
@@ -217,15 +218,22 @@ export default class VideoPlayer extends Component {
       isMuted,
     });
     this.showControls();
-    
+
   }
 
   onToggleFullScreen() {
-    if(Platform.OS === "android") {
-      var uri = this.props.video.uri;
-      var access_token = this.props.access_token
-      console.log(access_token)
-      NativeModules.BridgeModule.showFullscreen(uri,this.state.progress*1000, access_token);
+    
+   
+    if (Platform.OS === "android") {
+      const isFullScreen = !this.state.isFullScreen
+      // var uri = this.props.video.uri;
+      // var access_token = this.props.access_token
+      // console.log(access_token)
+      // NativeModules.BridgeModule.showFullscreen(uri,this.state.progress*1000, access_token);
+      this.setState({
+        isFullScreen
+      })
+      this.props.onToggleFullScreen()
     } else {
       this.player.presentFullscreenPlayer();
     }
@@ -399,7 +407,7 @@ export default class VideoPlayer extends Component {
             customStyles.seekBarProgress,
           ]}
         />
-        { !fullWidth && !disableSeek ? (
+        {!fullWidth && !disableSeek ? (
           <View
             style={[
               styles.seekBarKnob,
@@ -415,7 +423,7 @@ export default class VideoPlayer extends Component {
             onResponderRelease={this.onSeekRelease}
             onResponderTerminate={this.onSeekRelease}
           />
-        ) : null }
+        ) : null}
         <View style={[
           styles.seekBarBackground,
           { flexGrow: 1 - this.state.progress },
@@ -449,13 +457,13 @@ export default class VideoPlayer extends Component {
             />
           </TouchableOpacity>
         )}
-        <TouchableOpacity onPress={this.onToggleFullScreen} style={customStyles.controlButton}>
-            <Icon
-              style={[styles.extraControl, customStyles.controlIcon]}
-              name="fullscreen"
-              size={32}
-            />
-          </TouchableOpacity>
+        <TouchableOpacity onPress={() => this.onToggleFullScreen()} style={customStyles.controlButton}>
+          <Icon
+            style={[styles.extraControl, customStyles.controlIcon]}
+            name={this.state.isFullScreen ?  "fullscreen-exit": "fullscreen"}
+            size={32}
+          />
+        </TouchableOpacity>
       </View>
     );
   }
@@ -468,6 +476,7 @@ export default class VideoPlayer extends Component {
       pauseOnPress,
       fullScreenOnLongPress,
       customStyles,
+      isAudio,
       ...props
     } = this.props;
     return (
@@ -480,7 +489,7 @@ export default class VideoPlayer extends Component {
             style,
             customStyles.video,
           ]}
-          ref={p => { this.player = p; }}
+          ref={p => { this.player = p }}
           muted={this.props.muted || this.state.isMuted}
           paused={this.props.paused
             ? this.props.paused || !this.state.isPlaying
@@ -491,25 +500,28 @@ export default class VideoPlayer extends Component {
           source={video}
           resizeMode={resizeMode}
         />
-        <View
-          style={[
-            this.getSizeStyles(),
-            { marginTop: -this.getSizeStyles().height },
-          ]}
-        >
-          <TouchableOpacity
-            style={styles.overlayButton}
-            onPress={() => {
-              this.showControls();
-              if (pauseOnPress)
-                this.onPlayPress();
-            }}
-            onLongPress={() => {
-              if (fullScreenOnLongPress && Platform.OS !== 'android')
-                this.onToggleFullScreen();
-            }}
-          />
-        </View>
+        {
+          !isAudio &&
+          <View
+            style={[
+              this.getSizeStyles(),
+              { marginTop: -this.getSizeStyles().height },
+            ]}
+          >
+            <TouchableOpacity
+              style={styles.overlayButton}
+              onPress={() => {
+                this.showControls();
+                if (pauseOnPress)
+                  this.onPlayPress();
+              }}
+              onLongPress={() => {
+                if (fullScreenOnLongPress && Platform.OS !== 'android')
+                  this.onToggleFullScreen();
+              }}
+            />
+          </View>
+        }
         {((!this.state.isPlaying) || this.state.isControlsVisible)
           ? this.renderControls() : this.renderSeekBar(true)}
       </View>
@@ -517,14 +529,14 @@ export default class VideoPlayer extends Component {
   }
 
   renderContent() {
-    const { thumbnail, style } = this.props;
+    const { thumbnail, styleOutLine } = this.props;
     const { isStarted } = this.state;
 
     if (!isStarted && thumbnail) {
       return this.renderThumbnail();
     } else if (!isStarted) {
       return (
-        <View style={[styles.preloadingPlaceholder, this.getSizeStyles(), style]}>
+        <View style={[styles.preloadingPlaceholder, this.getSizeStyles(), styleOutLine]}>
           {this.renderStartButton()}
         </View>
       );
